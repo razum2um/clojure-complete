@@ -17,9 +17,8 @@
 
   String
   (zip-entries [jar-fname]
-    (let [zip-stream (-> jar-fname (FileInputStream.) (ZipInputStream.))]
-      (lazy-seq (if-let [e (.getNextEntry zip-stream)]
-                  (cons e (zip-entries zip-stream)))))))
+    (with-open [zip-stream (-> jar-fname (FileInputStream.) (ZipInputStream.))]
+      (into [] (zip-entries zip-stream)))))
 
 (defn- class-jar-entry? [e]
   (and (-> e .isDirectory not)
