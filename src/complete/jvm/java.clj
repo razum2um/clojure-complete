@@ -1,20 +1,17 @@
 (ns complete.jvm.java
   (:require [complete.jvm.jar-file :as jar-file]
             [clojure.string :as string])
-  (:import [java.io File]))
+  (:import [java.io File]
+           [org.apache.bcel.classfile ClassParser]))
 
-(defn- jars-from-path [path-name]
-  (when-let [path (System/getProperty path-name)]
-    (->> (string/split path #":")
-         (filter #(string/ends-with? % ".jar")))))
+(defn- class-jar-entry? [e]
+  (and (-> e .isDirectory not)
+       (-> e .getName (.endsWith ".class"))))
 
-(defn- file? [fname] (.isFile (File. fname)))
-(defn- bootclass-jars [] (jars-from-path "sun.boot.class.path"))
-(defn- classpath-jars [] (jars-from-path "java.class.path"))
-(defn jars []
-  (->> (concat (bootclass-jars) (classpath-jars))
-       (filter file?)
-       distinct))
+(defn- jar-class-names [jar-fname]
+  (->> (jar-file/zip-entries jar-fname)
+       (filter class-jar-entry?)
+       (map #(-> (ClassParser. jar-fname (.getName %)) .parse .getClassName))))
 
 (defn class-names []
-  (mapcat jar-file/jar-class-names (jars)))
+  (mapcat jar-class-names (jar-file/jars)))

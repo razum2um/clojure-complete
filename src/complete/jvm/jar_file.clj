@@ -1,7 +1,7 @@
 (ns complete.jvm.jar-file
+  (:require [clojure.string :as string])
   (:import [java.util.zip ZipInputStream]
-           [java.io FileInputStream]
-           [org.apache.bcel.classfile ClassParser]))
+           [java.io FileInputStream File]))
 
 (defprotocol ZipEntries
   (zip-entries [_]))
@@ -20,11 +20,15 @@
     (with-open [zip-stream (-> jar-fname (FileInputStream.) (ZipInputStream.))]
       (into [] (zip-entries zip-stream)))))
 
-(defn- class-jar-entry? [e]
-  (and (-> e .isDirectory not)
-       (-> e .getName (.endsWith ".class"))))
+(defn- jars-from-path [path-name]
+  (when-let [path (System/getProperty path-name)]
+    (->> (string/split path #":")
+         (filter #(string/ends-with? % ".jar")))))
 
-(defn jar-class-names [jar-fname]
-  (->> (zip-entries jar-fname)
-       (filter class-jar-entry?)
-       (map #(-> (ClassParser. jar-fname (.getName %)) .parse .getClassName))))
+(defn- file? [fname] (.isFile (File. fname)))
+(defn- bootclass-jars [] (jars-from-path "sun.boot.class.path"))
+(defn- classpath-jars [] (jars-from-path "java.class.path"))
+(defn jars []
+  (->> (concat (bootclass-jars) (classpath-jars))
+       (filter file?)
+       distinct))
