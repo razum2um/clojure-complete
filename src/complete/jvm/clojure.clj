@@ -5,7 +5,7 @@
            [java.util.zip ZipFile]
            [java.io PushbackReader]))
 
-(defn- try-read [rdr] (if (.ready? rdr) (LispReader/read rdr nil) ::nil))
+(defn try-read [rdr] (try (LispReader/read rdr nil) (catch RuntimeException _ ::nil)))
 
 (defn jar-entry->clj-ns [jar-name zip-entry]
   (with-open [z (ZipFile. jar-name)
@@ -14,7 +14,8 @@
     (->> (repeatedly #(try-read rdr))
          (take-while (complement #{::nil}))
          (filter #(-> % first (= 'ns)))
-         (map second))))
+         (map second)
+         (into []))))
 
 (defn- clojure-jar-entry? [e]
   (and (-> e .isDirectory not)
@@ -23,7 +24,7 @@
 (defn- clj-namespaces-in-jar [jar-name]
   (->> (jar-file/zip-entries jar-name)
        (filter clojure-jar-entry?)
-       (map #(jar-entry->clj-ns jar-name %))))
+       (mapcat #(jar-entry->clj-ns jar-name %))))
 
 (defn clojure-namespaces []
   (mapcat clj-namespaces-in-jar (jar-file/jars)))

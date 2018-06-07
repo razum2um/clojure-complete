@@ -6,7 +6,8 @@
 
 (defn- class-jar-entry? [e]
   (and (-> e .isDirectory not)
-       (-> e .getName (.endsWith ".class"))))
+       (-> e .getName (.endsWith ".class"))
+       (-> e .getName (.contains "__") not)))
 
 (defn- jar-class-names [jar-fname]
   (->> (jar-file/zip-entries jar-fname)

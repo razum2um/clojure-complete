@@ -1,5 +1,6 @@
 (ns complete.core
-  (:require [clojure.main])
+  (:require [clojure.main]
+            [complete.deps :as deps])
   (:import [java.util.jar JarFile]
            [java.io File]
            [java.lang.reflect Member]
@@ -10,7 +11,9 @@
 (defn namespaces
   "Returns a list of potential namespace completions for a given namespace"
   [ns]
-  (map name (concat (map ns-name (all-ns)) (keys (ns-aliases ns)))))
+  (map name (concat (map ns-name (all-ns))
+                    (keys (ns-aliases ns))
+                    (:clojure-namespaces deps/deps))))
 
 (defn ns-public-vars
   "Returns a list of potential public var name completions for a given namespace"
@@ -121,9 +124,23 @@
           (ns-classes ns)
           (ns-java-methods ns)))
 
+(defn rank [completion prefix]
+  (cond
+    (.startsWith completion prefix) 0
+    (.contains completion prefix) 10))
+
 (defn completions
   "Return a sequence of matching completions given a prefix string and an optional current namespace."
   ([prefix] (completions prefix *ns*))
   ([^String prefix ns]
-     (sort (for [^String completion (potential-completions prefix ns) :when (.startsWith completion prefix)]
-             completion))))
+   (sort (for [^String completion (potential-completions prefix ns) :when (.startsWith completion prefix)]
+           completion))))
+
+(defn completions-2
+  "Return a sequence of matching completions given a prefix string and an optional current namespace."
+  ([prefix] (completions-2 prefix *ns*))
+  ([^String prefix ns]
+   (->> (for [^String completion (potential-completions prefix ns) :let [rank (rank completion prefix)] :when rank]
+          [rank completions])
+        sort
+        (map second))))
