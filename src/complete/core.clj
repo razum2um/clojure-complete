@@ -96,7 +96,7 @@
 (defmulti potential-completions
   (fn [^String prefix ns]
     (cond (.contains prefix "/") :scoped
-          (.contains prefix ".") :class
+          (or (.contains prefix ".") (re-find #"[A-Z]" prefix)) :class
           :else                  :var)))
 
 (defmethod potential-completions :scoped
@@ -129,18 +129,18 @@
     (.startsWith completion prefix) 0
     (.contains completion prefix) 10))
 
-(defn completions
+(defn completions-1
   "Return a sequence of matching completions given a prefix string and an optional current namespace."
-  ([prefix] (completions prefix *ns*))
+  ([prefix] (completions-1 prefix *ns*))
   ([^String prefix ns]
    (sort (for [^String completion (potential-completions prefix ns) :when (.startsWith completion prefix)]
            completion))))
 
-(defn completions-2
+(defn completions
   "Return a sequence of matching completions given a prefix string and an optional current namespace."
-  ([prefix] (completions-2 prefix *ns*))
+  ([prefix] (completions prefix *ns*))
   ([^String prefix ns]
    (->> (for [^String completion (potential-completions prefix ns) :let [rank (rank completion prefix)] :when rank]
-          [rank completions])
+          [rank completion])
         sort
         (map second))))
