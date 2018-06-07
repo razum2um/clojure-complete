@@ -12,7 +12,8 @@
 (defn- jar-class-names [jar-fname]
   (->> (jar-file/zip-entries jar-fname)
        (filter class-jar-entry?)
-       (map #(-> (ClassParser. jar-fname (.getName %)) .parse .getClassName))))
+       (map #(-> (ClassParser. jar-fname (.getName %)) .parse .getClassName))
+       (remove #(re-find #"\$" %))))
 
 (defn class-names []
   (mapcat jar-class-names (jar-file/jars)))
